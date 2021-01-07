@@ -30,7 +30,7 @@ CORS(app)
 @app.route('/drinks')
 def drinks():
     
-    drinks = [drink.short() for drink in Drink.query.all()]
+    drinks = [drink.long() for drink in Drink.query.all()]
     
     if len(drinks) == 0:
         print("no Drinks")
@@ -202,3 +202,11 @@ def unprocessable(error):
 @TODO implement error handler for AuthError
     error handler should conform to general task above 
 '''
+
+@app.errorhandler(AuthError)
+def unauthorized(error):
+    return jsonify({
+                    "success": False, 
+                    "error": 401,
+                    "message": "Not Authorised"
+                    }), 401
