@@ -105,14 +105,20 @@ def check_permissions(permission, payload):
     !!NOTE urlopen has a common certificate error described here: https://stackoverflow.com/questions/50236117/scraping-ssl-certificate-verify-failed-error-for-http-en-wikipedia-org
 '''
 def verify_decode_jwt(token):
+    # GET THE PUBLIC KEY FROM AUTH0
     jsonurl = urlopen(f'https://{AUTH0_DOMAIN}/.well-known/jwks.json')
     jwks = json.loads(jsonurl.read())
+    
+    # GET THE DATA IN THE HEADER
     unverified_header = jwt.get_unverified_header(token)
+    
+    # CHOOSE OUR KEY
     rsa_key = {}
     if 'kid' not in unverified_header:
         raise AuthError({
             'code': 'invalid_header',
-            'description': 'Authorization malformed.'
+            'description': 'Authorization malformed.',
+            'error': 401,
         }, 401)
 
     for key in jwks['keys']:
@@ -124,6 +130,7 @@ def verify_decode_jwt(token):
                 'n': key['n'],
                 'e': key['e']
             }
+    
     if rsa_key:
         try:
             payload = jwt.decode(
@@ -138,23 +145,33 @@ def verify_decode_jwt(token):
 
         except jwt.ExpiredSignatureError:
             raise AuthError({
+                'success': False,
                 'code': 'token_expired',
-                'description': 'Token expired.'
+                'description': 'Token expired.',
+                'error': 401,
             }, 401)
 
         except jwt.JWTClaimsError:
             raise AuthError({
+                'success': False,
                 'code': 'invalid_claims',
-                'description': 'Incorrect claims. Please, check the audience and issuer.'
+                'description': 'Incorrect claims. Please, check the audience and issuer.',
+                'error': 401,
             }, 401)
+        
         except Exception:
             raise AuthError({
+                'success': False,
                 'code': 'invalid_header',
-                'description': 'Unable to parse authentication token.'
+                'description': 'Unable to parse authentication token.',
+                'error': 400
             }, 400)
+    
     raise AuthError({
+                'success': False,
                 'code': 'invalid_header',
-                'description': 'Unable to find the appropriate key.'
+                'description': 'Unable to find the appropriate key.',
+                'error': 400
             }, 400)
     
     # raise Exception('Not Implemented')

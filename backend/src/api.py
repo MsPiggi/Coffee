@@ -29,6 +29,7 @@ CORS(app)
 '''
 @app.route('/drinks')
 def drinks():
+    
     drinks = [drink.short() for drink in Drink.query.all()]
     
     if len(drinks) == 0:
@@ -50,13 +51,21 @@ def drinks():
 
 @app.route('/drinks-detail')
 @requires_auth("get:drinks-detail")
-def get_drinks_detail():
-    drinks = [drink.long() for drink in Drink.query.all()]
-    if len(drinks) == 0:
-        abort(404)
-    return jsonify({
-        "success": True,
-        "drinks": drinks}), 200
+def get_drinks_detail(payload):
+    
+    try:
+        drinks = [drink.long() for drink in Drink.query.all()]
+        
+        if len(drinks) == 0:
+            print("no Drinks")
+            abort(404)
+        
+        return jsonify({
+            "success": True,
+            "drinks": drinks}), 200
+
+    except:
+        abort(401)
 
 '''
 @TODO implement endpoint
@@ -69,11 +78,12 @@ def get_drinks_detail():
 '''
 @app.route('/drinks', methods=['POST'])
 @requires_auth('post:drinks')
-def new_drinks():
+def new_drinks(payload):
     try:
         body = request.get_json()  
         
         if body == None:
+            print("no drink input")
             abort(404)
         
         new_title = body.get('title')
@@ -105,27 +115,29 @@ def new_drinks():
 
 @app.route('/drinks/<int:id>', methods=['PATCH'])
 @requires_auth('patch:drinks')
-def patch_drinks(id):
+def patch_drinks(payload, id):
 
-    patch_drink = Drink.query.get(id)
-
+    patch_drink = Drink.query.filter(Drink.id == id).one_or_none()
+    
     if patch_drink == None:
+        print("no drink with that id found")
         abort(404)
 
     try:
         body = request.get_json()  
         
         if body == None:
+            print("no drink update input")
             abort(404)
         
-        patch_drink.title = new_title = body.get('title')      
-        patch_drink.recipe = new_title = body.get('recipe') 
+        patch_drink.title = body.get('title')      
+        patch_drink.recipe = json.dumps(body.get('recipe')) 
         patch_drink.update()
 
         return jsonify({
                         "success": True,
                         "message": "Drink Updated",
-                        "drinks": patch_drink
+                        "drinks": [patch_drink.long()]
                     }), 200
 
     except AuthError:
@@ -143,17 +155,17 @@ def patch_drinks(id):
 '''
 @app.route('/drinks/<int:id>', methods=['DELETE'])
 @requires_auth('delete:drinks')
-def delete_drinks(id):
+def delete_drinks(payload, id):
     try:
-        Drink.query.filter_by(id=id).delete()
-
+        delete_drink = Drink.query.filter_by(id=id).first()
+        delete_drink.delete()
         return jsonify({
                         "success": True,
                         "delete": id, 
                     }), 200
 
     except AuthError:
-         abort(422)
+        abort(422)
 
 ## Error Handling
 '''
